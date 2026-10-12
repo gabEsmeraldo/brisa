@@ -40,3 +40,11 @@
 "Turn on" = "Ligar";
 "Unexpected response from LG" = "Resposta inesperada da LG";
 "Vertical" = "Vertical";
+"LG account not linked" = "Conta LG não vinculada";
+"Sign in to LG" = "Entrar na LG";
+"LG account (Jet mode)" = "Conta LG (Modo Jet)";
+"Linked" = "Vinculada";
+"Unlink" = "Desvincular";
+"Jet isn't in LG's official API; sign in on LG's page to enable it." = "O Jet não está na API oficial da LG; entre pela página da LG para ativá-lo.";
+"Sign in…" = "Entrar…";
+"Jet works only in Cool mode with the AC on" = "O Jet só funciona no modo Refrigerar com o ar ligado";

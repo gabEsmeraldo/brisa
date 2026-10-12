@@ -54,6 +54,13 @@ final class ACStore {
     var isConnected = false
     var lastError: String?
     var isBusy = false
+    var jet = false
+    var legacyLinked = false
+
+    /// Private-API session, used only for Jet mode.
+    let legacy = LegacyThinQ(country: Locale.current.region?.identifier ?? "BR",
+                             language: Locale.preferredLanguages.first ?? "pt-BR")
+    private var legacyDeviceID: String?
 
     /// Called whenever the menu bar title should be redrawn.
     var onChange: (() -> Void)?
@@ -65,7 +72,6 @@ final class ACStore {
     var unit: String { useFahrenheit ? "F" : "C" }
     var minTemp: Double { useFahrenheit ? caps.minF : caps.minC }
     var maxTemp: Double { useFahrenheit ? caps.maxF : caps.maxC }
-    var jet: Bool { fan == "POWER" }
     var hasToken: Bool { !token.isEmpty }
 
     private var client: ThinQClient? {
@@ -134,6 +140,7 @@ final class ACStore {
             if Date() >= holdUntil { apply(state) }
             isConnected = true
             lastError = nil
+            await refreshLegacy()
         } catch {
             fail(error)
         }
@@ -163,14 +170,72 @@ final class ACStore {
         send(["airFlow": ["windStrength": f]])
     }
 
+    /// Jet only works while cooling; the AC drops Eco by itself when Jet starts.
+    var canJet: Bool { isOn && mode == "COOL" }
+
     func setJet(_ on: Bool) {
+        guard let id = legacyDeviceID else { return }
+        jet = on
         if on { eco = false }
-        setFan(on ? "POWER" : "AUTO")
+        holdUntil = Date().addingTimeInterval(4)
+        onChange?()
+        Task {
+            isBusy = true
+            defer { isBusy = false }
+            do {
+                try await legacy.set(id, key: "airState.wMode.jet", value: on ? 1 : 0)
+                try? await Task.sleep(for: .seconds(4))
+            } catch {
+                fail(error)
+                holdUntil = .distantPast
+            }
+            await refresh()
+        }
     }
+
+    func linkLegacy(redirect: URL) async {
+        do {
+            try await legacy.completeLogin(redirect: redirect)
+            legacyDeviceID = nil
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
+        await refresh()
+    }
+
+    func unlinkLegacy() {
+        legacy.signOut()
+        legacyDeviceID = nil
+        jet = false
+        caps.hasJet = false
+        legacyLinked = false
+    }
+
+    /// Finds this AC on the private API (ids differ from the official API) and reads Jet.
+    private func refreshLegacy() async {
+        legacyLinked = legacy.isLinked
+        guard legacy.isLinked else { caps.hasJet = false; return }
+        do {
+            if legacyDeviceID == nil {
+                let name = devices.first(where: { $0.id == deviceID })?.name
+                let acs = try await legacy.devices().filter { $0.snapshot["airState.wMode.jet"] != nil || $0.model.hasPrefix("RAC") }
+                legacyDeviceID = (acs.first(where: { $0.alias == name }) ?? acs.first)?.id
+            }
+            guard let id = legacyDeviceID else { caps.hasJet = false; return }
+            let snap = try await legacy.snapshot(id)
+            caps.hasJet = true
+            if Date() >= holdUntil, let v = snap["airState.wMode.jet"] as? NSNumber { jet = v.intValue != 0 }
+        } catch {
+            legacyLinked = legacy.isLinked
+            lastError = error.localizedDescription
+        }
+    }
+
 
     func setEco(_ on: Bool) {
         eco = on
-        if on && jet { fan = "AUTO" }
+        if on { jet = false }
         send(["powerSave": ["powerSaveEnabled": on]])
     }
 
@@ -274,8 +339,7 @@ final class ACStore {
         }
         if let m = writable("airConJobMode", "currentJobMode") as? [String], !m.isEmpty { c.modes = m }
         if let f = writable("airFlow", "windStrength") as? [String], !f.isEmpty {
-            c.hasJet = f.contains("POWER")
-            c.fanSpeeds = f.filter { $0 != "POWER" }
+            c.fanSpeeds = f
         }
         c.hasEco = writable("powerSave", "powerSaveEnabled") != nil
         c.hasSleep = writable("sleepTimer", "relativeHourToStop") != nil

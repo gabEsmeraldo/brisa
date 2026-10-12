@@ -3,9 +3,11 @@ import Security
 
 enum Keychain {
     private static let service = "io.github.gabesmeraldo.brisa"
-    private static let account = "thinq-pat"
 
-    static func readToken() -> String? {
+    static func readToken() -> String? { read(account: "thinq-pat") }
+    static func saveToken(_ token: String) { save(token, account: "thinq-pat") }
+
+    static func read(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -19,16 +21,17 @@ enum Keychain {
         return String(data: data, encoding: .utf8)
     }
 
-    static func saveToken(_ token: String) {
+    /// Saves `value`, or deletes the item when it's empty.
+    static func save(_ value: String, account: String) {
         let base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(base as CFDictionary)
-        guard !token.isEmpty else { return }
+        guard !value.isEmpty else { return }
         var add = base
-        add[kSecValueData as String] = Data(token.utf8)
+        add[kSecValueData as String] = Data(value.utf8)
         SecItemAdd(add as CFDictionary, nil)
     }
 }

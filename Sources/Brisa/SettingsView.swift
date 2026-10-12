@@ -5,6 +5,21 @@ struct SettingsView: View {
     let close: () -> Void
     @State private var tokenDraft = ""
     @State private var saving = false
+    @State private var login = LoginWindow()
+
+    private func signInLG() {
+        Task {
+            do {
+                let url = try await store.legacy.loginURL()
+                login.present(url: url) { redirect in
+                    guard let redirect else { return }
+                    Task { await store.linkLegacy(redirect: redirect) }
+                }
+            } catch {
+                store.lastError = error.localizedDescription
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -50,6 +65,22 @@ struct SettingsView: View {
                     Text("°F").tag(true)
                 }
                 .pickerStyle(.segmented)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L("LG account (Jet mode)")).font(.system(size: 12, weight: .medium))
+                HStack {
+                    if store.legacyLinked {
+                        Label(L("Linked"), systemImage: "checkmark.circle.fill").foregroundStyle(Theme.accent)
+                        Spacer()
+                        Button(L("Unlink")) { store.unlinkLegacy() }
+                    } else {
+                        Text(L("Jet isn't in LG's official API; sign in on LG's page to enable it."))
+                            .font(.system(size: 11)).foregroundStyle(Theme.secondary)
+                        Spacer()
+                        Button(L("Sign in…")) { signInLG() }
+                    }
+                }
             }
 
             Toggle(L("Launch at login"), isOn: $store.launchAtLogin)
