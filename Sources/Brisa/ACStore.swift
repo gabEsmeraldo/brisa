@@ -55,6 +55,13 @@ final class ACStore {
     var lastError: String?
     var isBusy = false
     var jet = false
+    /// Jet "held" from Brisa: the AC ends Jet on its own after a while, so we turn it back on
+    /// while cooling, until it's switched off in Brisa.
+    var jetHeld: Bool = UserDefaults.standard.bool(forKey: "jetHeld") {
+        didSet { UserDefaults.standard.set(jetHeld, forKey: "jetHeld") }
+    }
+    private var jetSince: Date?
+    private static let jetHoldInterval: TimeInterval = 60
     var legacyLinked = false
 
     /// Private-API session, used only for Jet mode.
@@ -94,7 +101,9 @@ final class ACStore {
         pollTask = Task { [weak self] in
             if refreshNow { await self?.refresh() }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(interval))
+                // Poll faster while holding Jet so a lapse is caught within a minute.
+                let wait = self?.jetHeld == true ? min(interval, Self.jetHoldInterval) : interval
+                try? await Task.sleep(for: .seconds(wait))
                 if Task.isCancelled { break }
                 await self?.refresh()
             }
@@ -176,6 +185,8 @@ final class ACStore {
     func setJet(_ on: Bool) {
         guard let id = legacyDeviceID else { return }
         jet = on
+        jetHeld = on
+        jetSince = on ? Date() : nil
         if on { eco = false }
         holdUntil = Date().addingTimeInterval(4)
         onChange?()
@@ -225,7 +236,18 @@ final class ACStore {
             guard let id = legacyDeviceID else { caps.hasJet = false; return }
             let snap = try await legacy.snapshot(id)
             caps.hasJet = true
-            if Date() >= holdUntil, let v = snap["airState.wMode.jet"] as? NSNumber { jet = v.intValue != 0 }
+            if Date() >= holdUntil, let v = snap["airState.wMode.jet"] as? NSNumber {
+                jet = v.intValue != 0
+                if jet, jetSince == nil { jetSince = Date() }
+                if jetHeld && !jet && canJet {
+                    let minutes = jetSince.map { Int(Date().timeIntervalSince($0) / 60) }
+                    Log.write("Jet ended by the AC after ~\(minutes.map(String.init) ?? "?") min; turning it back on")
+                    jetSince = Date()
+                    jet = true
+                    holdUntil = Date().addingTimeInterval(4)
+                    try await legacy.set(id, key: "airState.wMode.jet", value: 1)
+                }
+            }
         } catch {
             legacyLinked = legacy.isLinked
             lastError = error.localizedDescription
@@ -235,7 +257,7 @@ final class ACStore {
 
     func setEco(_ on: Bool) {
         eco = on
-        if on { jet = false }
+        if on { jet = false; jetHeld = false }
         send(["powerSave": ["powerSaveEnabled": on]])
     }
 
