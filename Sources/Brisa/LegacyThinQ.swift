@@ -71,7 +71,11 @@ final class LegacyThinQ {
     /// Exchanges the code from the login redirect for tokens.
     func completeLogin(redirect: URL) async throws {
         let items = URLComponents(url: redirect, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        guard let code = items.first(where: { $0.name == "code" })?.value else { throw Failure.badResponse }
+        guard let code = items.first(where: { $0.name == "code" })?.value else {
+            // LG reports sign-in problems as query parameters on the redirect.
+            let reason = items.first(where: { ["error", "error_description", "message", "returnMsg"].contains($0.name) })?.value
+            throw Failure.api(reason ?? "no code in redirect")
+        }
         if let backend = items.first(where: { $0.name == "oauth2_backend_url" })?.value, !backend.isEmpty {
             oauthBase = backend.hasSuffix("/") ? backend : backend + "/"
         }
