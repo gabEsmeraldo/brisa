@@ -91,10 +91,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     func popoverDidClose(_ notification: Notification) {
         store.startPolling(every: Self.closedInterval, refreshNow: false)
+        updateTitle()
+    }
+
+    /// Opening Brisa again (Spotlight, Dock, Finder) while it runs brings the item back with the panel.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        statusItem.isVisible = true
+        DispatchQueue.main.async { self.showPopover() }
+        return false
     }
 
     private func updateTitle() {
         guard let button = statusItem?.button else { return }
+        // Only show while the AC runs; keep it during setup, errors, or while the panel is open.
+        let needsAttention = !store.hasToken || !store.isConnected
+        statusItem.isVisible = store.isOn || needsAttention || popover.isShown
         let symbol = store.isConnected ? "snowflake" : "snowflake.slash"
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Brisa")
         image?.isTemplate = true

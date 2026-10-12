@@ -3,7 +3,7 @@
 A tiny macOS menu bar app to control an LG air conditioner through LG's official **ThinQ Connect API**.
 
 - Power, mode, target temperature, fan speed, Eco and Jet mode, sleep timer and airflow direction
-- Room temperature in the menu bar; the icon dims while the AC is off
+- Room temperature in the menu bar; the item only shows while the AC is on (open Brisa again from Spotlight to bring it back)
 - Right-click the icon to toggle power
 - Only shows the controls your unit's profile supports
 - English and Portuguese (Brazil)
