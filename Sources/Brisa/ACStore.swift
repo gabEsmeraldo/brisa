@@ -177,13 +177,21 @@ final class ACStore {
     func setTarget(_ t: Double) {
         let value = min(max(t.rounded(), minTemp), maxTemp)
         targetTemp = value
-        let key = caps.usesTemperatureInUnits ? "temperatureInUnits" : "temperature"
-        send([key: ["targetTemperature": value, "unit": unit]])
+        if caps.usesTemperatureInUnits {
+            send(["temperatureInUnits": ["targetTemperature": value, "unit": unit]])
+        } else {
+            let celsius = useFahrenheit ? (((value - 32) * 5 / 9) * 2).rounded() / 2 : value
+            send(["temperature": ["targetTemperature": celsius, "unit": "C"]])
+        }
     }
 
     func setSleep(hours: Int) {
         sleepHours = hours
-        send(["sleepTimer": ["relativeHourToStop": hours, "relativeMinuteToStop": 0]])
+        if hours == 0 {
+            send(["sleepTimer": ["relativeStopTimer": "UNSET"]])
+        } else {
+            send(["sleepTimer": ["relativeHourToStop": hours, "relativeMinuteToStop": 0]])
+        }
     }
 
     func setAirflow(_ a: Airflow) {
@@ -222,7 +230,7 @@ final class ACStore {
         if let f = Self.resource(s, "airFlow")?["windStrength"] as? String { fan = f }
         if let e = Self.resource(s, "powerSave")?["powerSaveEnabled"] as? Bool { eco = e }
         if let sl = Self.resource(s, "sleepTimer") {
-            sleepHours = (sl["relativeHourToStop"] as? Int) ?? 0
+            sleepHours = (sl["relativeStopTimer"] as? String) == "UNSET" ? 0 : (sl["relativeHourToStop"] as? Int) ?? 0
         }
         if let wd = Self.resource(s, "windDirection") {
             let v = wd["rotateUpDown"] as? Bool ?? false
@@ -273,7 +281,8 @@ final class ACStore {
         c.hasSleep = writable("sleepTimer", "relativeHourToStop") != nil
         c.hasSwingVertical = writable("windDirection", "rotateUpDown") != nil
         c.hasSwingHorizontal = writable("windDirection", "rotateLeftRight") != nil
-        c.usesTemperatureInUnits = props["temperatureInUnits"] != nil || props["temperature"] == nil
+        // Units that expose a writable `temperature.targetTemperature` reject writes to temperatureInUnits.
+        c.usesTemperatureInUnits = writable("temperature", "targetTemperature") == nil
 
         // Target range: temperatureInUnits lists one entry per unit, each with its own min/max.
         var tempEntries: [[String: Any]] = []
@@ -282,7 +291,8 @@ final class ACStore {
             if let d = props[key] as? [String: Any] { tempEntries.append(d) }
         }
         for entry in tempEntries {
-            for (key, suffix) in [("targetTemperature", ""), ("targetTemperatureC", "C"), ("targetTemperatureF", "F")] {
+            for (key, suffix) in [("targetTemperature", ""), ("coolTargetTemperature", ""),
+                                  ("targetTemperatureC", "C"), ("targetTemperatureF", "F")] {
                 guard let p = entry[key] as? [String: Any],
                       let v = (p["value"] as? [String: Any]).flatMap({ $0["w"] as? [String: Any] ?? $0 }),
                       let lo = number(v["min"]), let hi = number(v["max"]) else { continue }
