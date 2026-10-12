@@ -341,11 +341,19 @@ struct PanelBackground: ViewModifier {
 extension View {
     @ViewBuilder
     func glassCard<S: Shape>(_ shape: S, tint: Color? = nil) -> some View {
+        #if compiler(>=6.2)  // Liquid Glass needs the macOS 26 SDK
         if #available(macOS 26, *) {
             self.glassEffect(tint.map { Glass.regular.tint($0.opacity(0.35)).interactive() } ?? .regular.interactive(), in: shape)
         } else {
-            self.background(shape.fill(tint?.opacity(0.18) ?? Theme.card))
-                .overlay(shape.stroke(tint?.opacity(0.6) ?? Theme.cardStroke))
+            flatCard(shape, tint: tint)
         }
+        #else
+        flatCard(shape, tint: tint)
+        #endif
+    }
+
+    private func flatCard<S: Shape>(_ shape: S, tint: Color?) -> some View {
+        self.background(shape.fill(tint?.opacity(0.18) ?? Theme.card))
+            .overlay(shape.stroke(tint?.opacity(0.6) ?? Theme.cardStroke))
     }
 }
