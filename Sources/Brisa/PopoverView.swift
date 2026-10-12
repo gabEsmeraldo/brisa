@@ -21,7 +21,7 @@ struct PopoverView: View {
         }
         .padding(18)
         .frame(width: 430)
-        .background(Color.black)
+        .modifier(PanelBackground())
         .preferredColorScheme(.dark)
     }
 
@@ -41,6 +41,8 @@ struct PopoverView: View {
                     }
                     if store.caps.hasJet {
                         PillToggle(icon: "wind", title: L("Jet Mode"), isOn: store.jet) { store.setJet($0) }
+                            .disabled(!store.canJet)
+                            .help(store.canJet ? "" : L("Jet works only in Cool mode with the AC on"))
                     }
                 }
             }
@@ -64,8 +66,7 @@ struct PopoverView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(store.isOn ? Theme.accent : Theme.secondary)
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(Theme.card))
-                    .overlay(Circle().stroke(store.isOn ? Theme.accent.opacity(0.6) : Theme.cardStroke))
+                    .glassCard(Circle(), tint: store.isOn ? Theme.accent : nil)
             }
             .buttonStyle(.plain)
             .help(store.isOn ? L("Turn off") : L("Turn on"))
@@ -198,8 +199,7 @@ struct PillToggle: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .frame(width: 170)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.cardStroke))
+        .glassCard(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -221,7 +221,7 @@ struct TemperatureSlider: View {
                     let knob: CGFloat = 26
                     let x = (geo.size.width - knob) * fraction
                     ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 14).fill(Theme.card)
+                        RoundedRectangle(cornerRadius: 14).fill(.clear).glassCard(RoundedRectangle(cornerRadius: 14))
                         RoundedRectangle(cornerRadius: 14)
                             .fill(LinearGradient(colors: [Theme.accent.opacity(0.15), Theme.accent.opacity(0.45)],
                                                  startPoint: .leading, endPoint: .trailing))
@@ -267,8 +267,7 @@ struct RoundButton: View {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
                 .frame(width: 36, height: 36)
-                .background(Circle().fill(Theme.card))
-                .overlay(Circle().stroke(Theme.cardStroke))
+                .glassCard(Circle())
         }
         .buttonStyle(.plain)
     }
@@ -297,8 +296,7 @@ struct OptionTile: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.cardStroke))
+            .glassCard(RoundedRectangle(cornerRadius: 12))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -323,6 +321,31 @@ struct OptionTile: View {
             }
             .padding(6)
             .preferredColorScheme(.dark)
+        }
+    }
+}
+
+// MARK: Liquid Glass (macOS 26+), with the flat dark look as fallback
+
+struct PanelBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            // The popover itself is glass on macOS 26; keep it see-through.
+            content.background(Color.clear)
+        } else {
+            content.background(Color.black)
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func glassCard<S: Shape>(_ shape: S, tint: Color? = nil) -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(tint.map { Glass.regular.tint($0.opacity(0.35)).interactive() } ?? .regular.interactive(), in: shape)
+        } else {
+            self.background(shape.fill(tint?.opacity(0.18) ?? Theme.card))
+                .overlay(shape.stroke(tint?.opacity(0.6) ?? Theme.cardStroke))
         }
     }
 }
