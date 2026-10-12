@@ -71,7 +71,19 @@ final class LegacyThinQ {
     /// Exchanges the code from the login redirect for tokens.
     func completeLogin(redirect: URL) async throws {
         let items = URLComponents(url: redirect, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        guard let code = items.first(where: { $0.name == "code" })?.value else {
+        func param(_ name: String) -> String? { items.first(where: { $0.name == name })?.value }
+        if let backend = param("oauth2_backend_url"), !backend.isEmpty {
+            oauthBase = backend.hasSuffix("/") ? backend : backend + "/"
+        }
+        // Email/password sign-in on LG's page redirects with the tokens themselves.
+        if let refresh = param("refresh_token"), !refresh.isEmpty {
+            refreshToken = refresh
+            accessToken = param("access_token")
+            accessExpiry = accessToken == nil ? .distantPast : Date().addingTimeInterval(3000)
+            userNo = nil
+            return
+        }
+        guard let code = param("code") else {
             // returnCode 910 (confirm_ggl/apple/…): LG asks the phone app to run its native
             // social sign-in, which a desktop app can't do.
             if items.first(where: { $0.name == "returnCode" })?.value == "910" {
