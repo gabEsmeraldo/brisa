@@ -5,6 +5,8 @@ enum Theme {
     static let cardStroke = Color.white.opacity(0.08)
     static let secondary = Color.white.opacity(0.55)
     static let accent = Color(red: 0.55, green: 0.80, blue: 1.0)
+    /// Offscreen renders (README screenshots) can't capture glass, so they use the flat look.
+    @MainActor static var forceFlat = false
 }
 
 struct PopoverView: View {
@@ -329,7 +331,7 @@ struct OptionTile: View {
 
 struct PanelBackground: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
+        if #available(macOS 26, *), !Theme.forceFlat {
             // The popover itself is glass on macOS 26; keep it see-through.
             content.background(Color.clear)
         } else {
@@ -342,7 +344,7 @@ extension View {
     @ViewBuilder
     func glassCard<S: Shape>(_ shape: S, tint: Color? = nil) -> some View {
         #if compiler(>=6.2)  // Liquid Glass needs the macOS 26 SDK
-        if #available(macOS 26, *) {
+        if #available(macOS 26, *), !Theme.forceFlat {
             self.glassEffect(tint.map { Glass.regular.tint($0.opacity(0.35)).interactive() } ?? .regular.interactive(), in: shape)
         } else {
             flatCard(shape, tint: tint)

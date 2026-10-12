@@ -4,6 +4,12 @@ import SwiftUI
 @main
 enum BrisaMain {
     static func main() {
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--screenshot"), i + 1 < args.count {
+            _ = NSApplication.shared
+            MainActor.assumeIsolated { Screenshot.render(to: URL(fileURLWithPath: args[i + 1])) }
+            return
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
