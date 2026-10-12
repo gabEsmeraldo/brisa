@@ -13,7 +13,7 @@ final class LegacyThinQ {
             switch self {
             case .notLinked: return L("LG account not linked")
             case .badResponse: return L("Unexpected response from LG")
-            case .api(let code): return "LG (\(code))"
+            case .api(let message): return message
             }
         }
     }
@@ -72,6 +72,11 @@ final class LegacyThinQ {
     func completeLogin(redirect: URL) async throws {
         let items = URLComponents(url: redirect, resolvingAgainstBaseURL: false)?.queryItems ?? []
         guard let code = items.first(where: { $0.name == "code" })?.value else {
+            // returnCode 910 (confirm_ggl/apple/…): LG asks the phone app to run its native
+            // social sign-in, which a desktop app can't do.
+            if items.first(where: { $0.name == "returnCode" })?.value == "910" {
+                throw Failure.api(L("Google/Apple sign-in only works inside LG's phone app. Sign in with your LG email and password instead."))
+            }
             // LG reports sign-in problems as query parameters on the redirect.
             let reason = items.first(where: { ["error", "error_description", "message", "returnMsg"].contains($0.name) })?.value
             throw Failure.api(reason ?? "no code in redirect")

@@ -49,10 +49,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     /// LG's sign-in redirect (`lgaccount.lgsmartthinq:/?code=…`) coming back from the browser.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls where url.scheme == LegacyThinQ.redirectScheme {
+            Self.logRedirect(url)
             Task {
                 await store.linkLegacy(redirect: url)
                 showPopover()
             }
+        }
+    }
+
+    /// Records redirects in ~/Library/Logs/Brisa.log with secrets masked, to debug LG's sign-in flow.
+    private static func logRedirect(_ url: URL) {
+        var parts = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let items = parts?.queryItems
+        parts?.queryItems = items?.map { item in
+            ["code", "access_token", "refresh_token", "token"].contains(item.name)
+                ? URLQueryItem(name: item.name, value: "<\(item.value?.count ?? 0) chars>") : item
+        }
+        let line = "\(Date()) \(parts?.string ?? url.scheme ?? "")\n"
+        let log = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Logs/Brisa.log")
+        if let handle = try? FileHandle(forWritingTo: log) {
+            handle.seekToEndOfFile(); handle.write(Data(line.utf8)); try? handle.close()
+        } else {
+            try? Data(line.utf8).write(to: log)
         }
     }
 
