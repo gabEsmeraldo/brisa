@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17B3AF"/>
+      <stop offset="1" stop-color="#0B7472"/>
+    </linearGradient>
+  </defs>
+  <rect width="660" height="400" fill="url(#bg)"/>
+  <!-- distant breeze -->
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="none" stroke-opacity="0.07" stroke-width="14">
+    <path d="M-20 70 H300 a34 34 0 1 0 -34 -34"/>
+    <path d="M380 350 H700"/>
+    <path d="M420 300 H600 a30 30 0 1 1 -30 30"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="none" stroke-opacity="0.10" stroke-width="5">
+    <path d="M40 330 C140 300 220 360 330 326 S520 300 640 330"/>
+    <path d="M10 360 C120 340 240 384 360 356 S540 340 660 362"/>
+    <path d="M360 52 C430 36 500 70 580 50 a18 18 0 1 0 -14 -26"/>
+    <path d="M60 120 H170 a16 16 0 1 0 -16 -16"/>
+  </g>
+  <!-- airflow streaks -->
+  <g stroke="#FFFFFF" stroke-linecap="round" stroke-opacity="0.16" stroke-width="2">
+    <path d="M30 230 H90"/><path d="M50 250 H110"/><path d="M560 160 H630"/><path d="M540 180 H600"/>
+    <path d="M250 110 H290"/><path d="M470 236 H520"/>
+  </g>
+  <!-- arrow between icons (app at 180,190; Applications at 480,190) -->
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="none" stroke-width="4" stroke-opacity="0.9">
+    <path d="M262 190 C300 168 352 168 392 186" stroke-dasharray="2 11"/>
+    <path d="M380 172 L398 189 L376 198" stroke-linejoin="round"/>
+  </g>
+  <text x="330" y="300" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.92"
+        font-family="-apple-system, Helvetica Neue, sans-serif" font-size="15" font-weight="500">Drag Brisa into Applications</text>
+</svg>

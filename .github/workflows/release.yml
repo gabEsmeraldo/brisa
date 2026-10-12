@@ -17,6 +17,8 @@ jobs:
           XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
           echo "Using $XCODE"
           sudo xcode-select -s "$XCODE"
+      - name: Install create-dmg
+        run: brew install create-dmg
       - name: Build DMG
         run: VERSION="${GITHUB_REF_NAME#v}" ./scripts/package.sh dmg
       - name: Publish release

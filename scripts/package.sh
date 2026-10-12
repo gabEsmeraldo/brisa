@@ -19,11 +19,26 @@ cp -R Resources/*.lproj Resources/AppIcon.icns "$APP/Contents/Resources/"
 codesign --force --deep --sign - "$APP"
 
 if [ "${1:-}" = "dmg" ]; then
-    STAGE=build/dmg
-    mkdir -p "$STAGE" && cp -R "$APP" "$STAGE/" && ln -s /Applications "$STAGE/Applications"
-    hdiutil create -volname Brisa -srcfolder "$STAGE" -ov -format UDZO "build/Brisa-$VERSION.dmg" >/dev/null
+    DMG="build/Brisa-$VERSION.dmg"
+    swift scripts/make-dmg-background.swift .
+    tiffutil -cathidpicheck build/bg.png build/bg@2x.png -out build/dmg-background.tiff >/dev/null
+    STAGE=build/dmg && mkdir -p "$STAGE" && cp -R "$APP" "$STAGE/"
+    # Styled installer window: breeze background, app on the left, Applications on the right.
+    create-dmg \
+        --volname Brisa \
+        --volicon Resources/AppIcon.icns \
+        --background build/dmg-background.tiff \
+        --window-pos 200 160 \
+        --window-size 660 400 \
+        --icon-size 112 \
+        --text-size 13 \
+        --icon Brisa.app 180 190 \
+        --hide-extension Brisa.app \
+        --app-drop-link 480 190 \
+        --no-internet-enable \
+        "$DMG" "$STAGE" >/dev/null
     rm -rf "$STAGE"
-    echo "build/Brisa-$VERSION.dmg"
+    echo "$DMG"
 else
     echo "$APP"
 fi
