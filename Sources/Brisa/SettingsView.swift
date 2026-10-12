@@ -5,18 +5,12 @@ struct SettingsView: View {
     let close: () -> Void
     @State private var tokenDraft = ""
     @State private var saving = false
-    private let login = LoginWindow.shared
 
     private func signInLG() {
         Task {
             do {
                 let url = try await store.legacy.loginURL()
-                login.present(url: url) { result in
-                    switch result {
-                    case .success(let redirect): Task { await store.linkLegacy(redirect: redirect) }
-                    case .failure(let error): store.lastError = error.localizedDescription
-                    }
-                }
+                LoginWindow.present(url: url)
             } catch {
                 store.lastError = error.localizedDescription
             }

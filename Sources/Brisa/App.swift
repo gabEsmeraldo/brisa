@@ -46,6 +46,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
 
+    /// LG's sign-in redirect (`lgaccount.lgsmartthinq:/?code=…`) coming back from the browser.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == LegacyThinQ.redirectScheme {
+            Task {
+                await store.linkLegacy(redirect: url)
+                showPopover()
+            }
+        }
+    }
+
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         let isRightClick = event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true
