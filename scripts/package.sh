@@ -13,7 +13,7 @@ BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Brisa"
 rm -rf build && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Brisa"
 sed "s/__VERSION__/$VERSION/g" Resources/Info.plist > "$APP/Contents/Info.plist"
-cp -R Resources/*.lproj "$APP/Contents/Resources/"
+cp -R Resources/*.lproj Resources/AppIcon.icns "$APP/Contents/Resources/"
 
 # Ad-hoc signature: required to run on Apple Silicon, free, but not notarized.
 codesign --force --deep --sign - "$APP"
