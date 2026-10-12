@@ -238,6 +238,7 @@ final class ACStore {
             caps.hasJet = true
             if Date() >= holdUntil, let v = snap["airState.wMode.jet"] as? NSNumber {
                 jet = v.intValue != 0
+                // After a restart the start time is unknown; count from the first time we see Jet on.
                 if jet, jetSince == nil { jetSince = Date() }
                 if jetHeld && !jet && canJet {
                     let minutes = jetSince.map { Int(Date().timeIntervalSince($0) / 60) }

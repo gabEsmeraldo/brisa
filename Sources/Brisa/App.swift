@@ -85,8 +85,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.isShown ? popover.performClose(nil) : showPopover()
     }
 
-    private func showPopover() {
+    /// Shows the panel under the menu bar item. When the item was just un-hidden, its window
+    /// isn't placed in the menu bar yet, so wait for it instead of anchoring to a stale frame.
+    private func showPopover(attempt: Int = 0) {
+        statusItem.isVisible = true
         guard let button = statusItem.button else { return }
+        let placed = button.window.map { $0.isVisible && $0.frame.width > 0 && $0.screen != nil } ?? false
+        if !placed || attempt == 0 && button.window?.occlusionState.contains(.visible) != true {
+            if attempt < 10 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.showPopover(attempt: attempt + 1) }
+                return
+            }
+        }
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
     }
@@ -102,8 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// Opening Brisa again (Spotlight, Dock, Finder) while it runs brings the item back with the panel.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        statusItem.isVisible = true
-        DispatchQueue.main.async { self.showPopover() }
+        showPopover()
         return false
     }
 
